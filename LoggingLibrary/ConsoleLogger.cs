@@ -1,4 +1,4 @@
-﻿namespace FileParserService {
+﻿namespace LoggingLibrary {
   public class ConsoleLogger : ILogger {
     public void LogInfo(string message, ConsoleColor foregroundColor) {
       Console.ForegroundColor = foregroundColor;

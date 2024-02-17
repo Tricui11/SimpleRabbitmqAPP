@@ -1,8 +1,12 @@
-﻿namespace FileParserService {
+﻿using LoggingLibrary;
+
+namespace FileParserService {
   class Program {
     static void Main(string[] args) {
       string directoryPath = @"C:\Users\Furer\Downloads\XMLData";
-      RabbitMQClient rabbitMQClient = new();
+      string queueName = "YourQueueName";
+      string connectionString = "YourRabbitMQConnectionString";
+      RabbitMQClient rabbitMQClient = new(queueName, connectionString);
       ConsoleLogger logger = new();
 
       FileParser fileParser = new(directoryPath, rabbitMQClient, logger);

@@ -1,5 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using LoggingLibrary;
 
 namespace FileParserService {
   public class FileParser {
@@ -8,6 +9,7 @@ namespace FileParserService {
     private readonly ILogger _logger;
     private const string _processedDir = "processed";
     private const string _invalidDir = "invalid";
+    private Dictionary<string, List<Module>> _processedFiles = new Dictionary<string, List<Module>>();
 
     public FileParser(string directoryPath, RabbitMQClient rabbitMQClient, ILogger logger) {
       _directoryPath = directoryPath;
@@ -46,12 +48,21 @@ namespace FileParserService {
 
     private bool ProcessXmlFile(string filePath) {
       try {
-        string xmlContent = File.ReadAllText(filePath);
+        List<Module> modules;
 
-        List<Module> modules = ParseXml(xmlContent, filePath);
+        if (_processedFiles.ContainsKey(filePath)) {
+          modules = _processedFiles[filePath];
+        } else {
+          string xmlContent = File.ReadAllText(filePath);
+          modules = ParseXml(xmlContent, filePath);
+
+          if (modules.Any()) {
+            modules.ForEach(p => p.ChangeModuleStateXml());
+            _processedFiles.Add(filePath, modules);
+          }
+        }
+
         if (modules.Any()) {
-          modules.ForEach(p => p.ChangeModuleStateXml());
-
           bool success = _rabbitMQClient.SendModules(modules);
           if (!success) {
             _logger.LogError($"Error sending XML file {Path.GetFileName(filePath)} through RabbitMQ");
