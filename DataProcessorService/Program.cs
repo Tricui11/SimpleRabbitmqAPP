@@ -5,7 +5,7 @@ namespace DataProcessorService {
     static void Main(string[] args) {
 
       string queueName = "YourQueueName";
-      string connectionString = "YourRabbitMQConnectionString";
+      string connectionString = "localhost";
 
       ILogger logger = new ConsoleLogger();
 

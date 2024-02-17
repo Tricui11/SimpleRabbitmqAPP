@@ -1,6 +1,7 @@
 ﻿using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using LoggingLibrary;
+using ModuleLibrary;
 
 namespace FileParserService {
   public class FileParser {
@@ -57,7 +58,7 @@ namespace FileParserService {
           modules = ParseXml(xmlContent, filePath);
 
           if (modules.Any()) {
-            modules.ForEach(p => p.ChangeModuleStateXml());
+            modules.ForEach(p => p.ChangeModuleState());
             _processedFiles.Add(filePath, modules);
           }
         }

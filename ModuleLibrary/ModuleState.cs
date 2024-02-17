@@ -1,4 +1,4 @@
-﻿namespace FileParserService {
+﻿namespace ModuleLibrary {
   public enum ModuleState {
     Online,
     Run,

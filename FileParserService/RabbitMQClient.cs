@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using ModuleLibrary;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
 
@@ -9,7 +10,13 @@ namespace FileParserService {
 
     public RabbitMQClient(string queueName, string rabbitMQHost) {
       _queueName = queueName;
-      _connectionFactory = new ConnectionFactory() { HostName = rabbitMQHost };
+      
+      _connectionFactory = new ConnectionFactory() {
+        HostName = rabbitMQHost,
+    //    Port = 15672,
+      //  UserName = "guest",
+      //  Password = "guest"
+      };
     }
 
     public bool SendModules(List<Module> modules) {
@@ -21,18 +28,15 @@ namespace FileParserService {
                               exclusive: false,
                               autoDelete: false,
                               arguments: null);
-
-          foreach (var module in modules) {
-            var modulesJson = JsonConvert.SerializeObject(module);
-            var body = Encoding.UTF8.GetBytes(modulesJson);
-
-            channel.BasicPublish(exchange: "",
-                                routingKey: _queueName,
-                                basicProperties: null,
-                                body: body);
-
-            Console.WriteLine($"Sent message: {modulesJson}");
-          }
+          
+          var modulesJson = JsonConvert.SerializeObject(modules);
+          var body = Encoding.UTF8.GetBytes(modulesJson);
+          channel.BasicPublish(exchange: "",
+            routingKey: _queueName,
+            basicProperties: null,
+            body: body);
+          
+          Console.WriteLine($"Sent message: {modulesJson}");
 
           return true;
         }

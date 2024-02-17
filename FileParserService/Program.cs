@@ -5,7 +5,7 @@ namespace FileParserService {
     static void Main(string[] args) {
       string directoryPath = @"C:\Users\Furer\Downloads\XMLData";
       string queueName = "YourQueueName";
-      string connectionString = "YourRabbitMQConnectionString";
+      string connectionString = "localhost";
       RabbitMQClient rabbitMQClient = new(queueName, connectionString);
       ConsoleLogger logger = new();
 

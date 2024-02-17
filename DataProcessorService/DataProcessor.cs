@@ -1,7 +1,11 @@
 ﻿using System.Text;
 using LoggingLibrary;
+using ModuleLibrary;
+using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using Microsoft.Data.Sqlite;
+using SQLitePCL;
 
 namespace DataProcessorService {
   public class DataProcessor {
@@ -18,7 +22,21 @@ namespace DataProcessorService {
     public void Start() {
       _logger.LogInfo("DataProcessor started");
 
-      var factory = new ConnectionFactory { Uri = new Uri(_connectionString) };
+
+
+
+
+
+      var factory = new ConnectionFactory() {
+        HostName = _connectionString,
+        //    Port = 15672,
+        //  UserName = "guest",
+        //  Password = "guest"
+      };
+
+
+
+
       using var connection = factory.CreateConnection();
       using var channel = connection.CreateModel();
 
@@ -36,6 +54,8 @@ namespace DataProcessorService {
         ProcessMessage(message);
 
         _logger.LogInfo("DataProcessor received and processed a message: {message}");
+
+        channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
       };
       channel.BasicConsume(queue: _queueName,
                            autoAck: true,
@@ -45,11 +65,51 @@ namespace DataProcessorService {
     }
 
     private void ProcessMessage(string message) {
-      // Implement your message processing logic here
       _logger.LogInfo($"Processing message: {message}");
 
-      // For demonstration purposes, let's just log the message
+      var modules = JsonConvert.DeserializeObject<List<Module>>(message);
+
+      SaveModulesToDatabase(modules);
+
       _logger.LogInfo($"Message processed: {message}");
+    }
+
+    private void SaveModulesToDatabase(List<Module> modules) {
+
+
+
+      string databaseFileName = "devicesDB.db";
+      string databaseFolderPath = @"C:\Users\Furer\Downloads";
+      string databaseFilePath = Path.Combine(databaseFolderPath, databaseFileName);
+
+      string connectionString = $"Data Source={databaseFilePath}";
+
+
+
+      using (SqliteConnection connection = new(connectionString)) {
+        SQLite3Provider_e_sqlite3 sqlite3Provider = new();
+        raw.SetProvider(sqlite3Provider);
+
+        connection.Open();
+
+        string createTableQuery = @"CREATE TABLE IF NOT EXISTS Modules (
+                                ModuleCategoryID TEXT PRIMARY KEY,
+                                ModuleState TEXT
+                            )";
+
+        using (SqliteCommand command = new(createTableQuery, connection)) {
+          command.ExecuteNonQuery();
+        }
+
+        string Query = "INSERT OR REPLACE INTO TableName (ModuleCategoryID, ModuleState) VALUES (@CategoryID, @State);";
+        foreach (var module in modules) {
+          using (SqliteCommand command = new(Query, connection)) {
+            command.Parameters.AddWithValue("@CategoryID", module.ModuleCategoryID);
+            command.Parameters.AddWithValue("@State", module.ModuleState.ToString());
+            command.ExecuteNonQuery();
+          }
+        }
+      }
     }
   }
 }

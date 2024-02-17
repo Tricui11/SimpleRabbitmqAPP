@@ -1,4 +1,4 @@
-﻿namespace FileParserService {
+﻿namespace ModuleLibrary {
   public class Module {
     private static List<ModuleState> allStates;
 
@@ -9,7 +9,7 @@
       allStates = Enum.GetValues(typeof(ModuleState)).Cast<ModuleState>().ToList();
     }
 
-    public void ChangeModuleStateXml() {
+    public void ChangeModuleState() {
       List<ModuleState> statesCopy = new(allStates);
 
       statesCopy.Remove(ModuleState);
