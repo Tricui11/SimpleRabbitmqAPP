@@ -1,7 +1,7 @@
 ﻿namespace FileParserService {
   public class ConsoleLogger : ILogger {
-    public void LogInfo(string message) {
-      Console.ForegroundColor = ConsoleColor.White;
+    public void LogInfo(string message, ConsoleColor foregroundColor) {
+      Console.ForegroundColor = foregroundColor;
       Console.WriteLine($"[INFO] {DateTime.Now:s}: {message}");
       Console.ResetColor();
     }

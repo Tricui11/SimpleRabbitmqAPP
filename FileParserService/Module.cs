@@ -1,16 +1,22 @@
 ﻿namespace FileParserService {
   public class Module {
+    private static List<ModuleState> allStates;
+
     public string ModuleCategoryID { get; set; }
     public ModuleState ModuleState { get; set; }
 
-    public static ModuleState ChangeModuleStateXml(ModuleState currentState) {
-      var allStates = Enum.GetValues(typeof(ModuleState)).Cast<ModuleState>().ToList();
+    static Module() {
+      allStates = Enum.GetValues(typeof(ModuleState)).Cast<ModuleState>().ToList();
+    }
 
-      allStates.Remove(currentState);
+    public void ChangeModuleStateXml() {
+      List<ModuleState> statesCopy = new(allStates);
+
+      statesCopy.Remove(ModuleState);
 
       Random random = new();
-      int index = random.Next(0, allStates.Count);
-      return allStates[index];
+      int index = random.Next(0, statesCopy.Count);
+      ModuleState = statesCopy[index];
     }
   }
 }

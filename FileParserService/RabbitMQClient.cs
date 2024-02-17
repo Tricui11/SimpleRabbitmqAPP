@@ -1,6 +1,7 @@
 ﻿namespace FileParserService {
   public class RabbitMQClient {
-    public void SendModules(List<Module> modules) {
+    public bool SendModules(List<Module> modules) {
+      return true;
     }
   }
 }
