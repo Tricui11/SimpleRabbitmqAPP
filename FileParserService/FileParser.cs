@@ -1,21 +1,32 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using LoggingLibrary;
-using ModuleLibrary;
+using CommonLibrary.Logging;
+using CommonLibrary.Models;
+using CommonLibrary.Settings;
+using Newtonsoft.Json;
+using RabbitMQ.Client;
 
 namespace FileParserService {
   public class FileParser {
-    private readonly string _directoryPath;
-    private readonly RabbitMQClient _rabbitMQClient;
+    private readonly string _dataDirectoryPath;
+    private readonly ConnectionFactory _connectionFactory;
+    private readonly string _queueName;
     private readonly ILogger _logger;
     private const string _processedDir = "processed";
     private const string _invalidDir = "invalid";
-    private Dictionary<string, List<Module>> _processedFiles = new Dictionary<string, List<Module>>();
+    private Dictionary<string, List<Module>> _processedFiles = new();
 
-    public FileParser(string directoryPath, RabbitMQClient rabbitMQClient, ILogger logger) {
-      _directoryPath = directoryPath;
-      _rabbitMQClient = rabbitMQClient;
+    public FileParser(RabbitMQSettings rabbitMQSettings, ILogger logger, string dataDirectoryPath) {
+      _queueName = rabbitMQSettings.QueueName;
       _logger = logger;
+      _connectionFactory = new ConnectionFactory() {
+        HostName = rabbitMQSettings.HostName,
+        Port = rabbitMQSettings.Port,
+        UserName = rabbitMQSettings.UserName,
+        Password = rabbitMQSettings.Password
+      };
+      _dataDirectoryPath = dataDirectoryPath;
     }
 
     public void Start() {
@@ -26,7 +37,7 @@ namespace FileParserService {
     private void MonitorDirectory() {
       while (true) {
         try {
-          string[] xmlFiles = Directory.GetFiles(_directoryPath, "*.xml");
+          string[] xmlFiles = Directory.GetFiles(_dataDirectoryPath, "*.xml");
 
           foreach (string xmlFile in xmlFiles.OrderBy(p => p)) {
             _logger.LogInfo($"A file {Path.GetFileName(xmlFile)} is being processed", ConsoleColor.Yellow);
@@ -64,7 +75,8 @@ namespace FileParserService {
         }
 
         if (modules.Any()) {
-          bool success = _rabbitMQClient.SendModules(modules);
+          string modulesJson = JsonConvert.SerializeObject(modules);
+          bool success = SendRabbitMQMessage(modulesJson);
           if (!success) {
             _logger.LogError($"Error sending XML file {Path.GetFileName(filePath)} through RabbitMQ");
           }
@@ -81,7 +93,7 @@ namespace FileParserService {
 
     private void MoveFileTo(string dir, string filePath) {
       try {
-        string processedDirectory = Path.Combine(_directoryPath, dir);
+        string processedDirectory = Path.Combine(_dataDirectoryPath, dir);
         Directory.CreateDirectory(processedDirectory);
 
         string fileName = Path.GetFileName(filePath);
@@ -161,6 +173,33 @@ namespace FileParserService {
         }
       } else {
         throw new Exception("ModuleState not found");
+      }
+    }
+
+    public bool SendRabbitMQMessage(string json) {
+      try {
+        using (var connection = _connectionFactory.CreateConnection())
+        using (var channel = connection.CreateModel()) {
+          channel.QueueDeclare(queue: _queueName,
+                              durable: false,
+                              exclusive: false,
+                              autoDelete: false,
+                              arguments: null);
+
+          var body = Encoding.UTF8.GetBytes(json);
+          channel.BasicPublish(exchange: "",
+            routingKey: _queueName,
+            basicProperties: null,
+            body: body);
+
+          Console.WriteLine($"Sent message: {json}");
+
+          return true;
+        }
+      }
+      catch (Exception ex) {
+        Console.WriteLine($"Error while sending RabbitMQ message: {ex.Message}");
+        return false;
       }
     }
   }

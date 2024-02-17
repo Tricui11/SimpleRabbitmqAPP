@@ -1,4 +1,4 @@
-﻿namespace ModuleLibrary {
+﻿namespace CommonLibrary.Models {
   public class Module {
     private static List<ModuleState> allStates;
 
