@@ -99,7 +99,6 @@ namespace FileParserService {
         string fileName = Path.GetFileName(filePath);
         string destinationPath = Path.Combine(processedDirectory, fileName);
 
-        // If a file with the same name already exists, add a random string to the name
         if (File.Exists(destinationPath)) {
           string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
           string fileExtension = Path.GetExtension(filePath);
@@ -180,17 +179,10 @@ namespace FileParserService {
       try {
         using (var connection = _connectionFactory.CreateConnection())
         using (var channel = connection.CreateModel()) {
-          channel.QueueDeclare(queue: _queueName,
-                              durable: false,
-                              exclusive: false,
-                              autoDelete: false,
-                              arguments: null);
+          channel.QueueDeclare(queue: _queueName, durable: false, exclusive: false, autoDelete: false, arguments: null);
 
           var body = Encoding.UTF8.GetBytes(json);
-          channel.BasicPublish(exchange: "",
-            routingKey: _queueName,
-            basicProperties: null,
-            body: body);
+          channel.BasicPublish(exchange: "", routingKey: _queueName, basicProperties: null, body: body);
 
           Console.WriteLine($"Sent message: {json}");
 

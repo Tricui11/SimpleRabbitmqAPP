@@ -1,20 +1,19 @@
-﻿using Newtonsoft.Json;
-using RabbitMQ.Client;
-using Microsoft.Data.Sqlite;
-using SQLitePCL;
+﻿using System.Text;
 using CommonLibrary.Logging;
-using CommonLibrary.Settings;
 using CommonLibrary.Models;
+using CommonLibrary.Settings;
+using Newtonsoft.Json;
+using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
-using System.Text;
 
 namespace DataProcessorService {
   public class DataProcessor {
     private readonly ConnectionFactory _connectionFactory;
     private readonly string _queueName;
     private readonly ILogger _logger;
+    private readonly DatabaseManager _databaseManager;
 
-    public DataProcessor(RabbitMQSettings rabbitMQSettings, ILogger logger) {
+    public DataProcessor(RabbitMQSettings rabbitMQSettings, ILogger logger, string connectionString) {
       _queueName = rabbitMQSettings.QueueName;
       _logger = logger;
       _connectionFactory = new ConnectionFactory() {
@@ -23,6 +22,7 @@ namespace DataProcessorService {
         UserName = rabbitMQSettings.UserName,
         Password = rabbitMQSettings.Password
       };
+      _databaseManager = new DatabaseManager(connectionString);
     }
 
     public void Start() {
@@ -39,11 +39,13 @@ namespace DataProcessorService {
           var body = ea.Body.ToArray();
           var message = Encoding.UTF8.GetString(body);
 
-          ProcessMessage(message);
-
-          _logger.LogInfo($"DataProcessor received and processed a message: {message}");
-
-          channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+          bool success = ProcessMessage(message);
+          if (success) {
+            _logger.LogInfo($"DataProcessor received and processed the message.");
+            channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+          } else {
+            _logger.LogError($"Error processing the message. Message will be requeued.");
+          }
         };
 
         channel.BasicConsume(queue: _queueName, autoAck: false, consumer: consumer);
@@ -51,50 +53,23 @@ namespace DataProcessorService {
         Console.ReadLine();
       }
       catch (Exception ex) {
-        _logger.LogError($"An error occurred in DataProcessor: {ex.Message}");
+        _logger.LogError($"An error occurred while processing: {ex.Message}");
       }
     }
 
-    private void ProcessMessage(string message) {
-      _logger.LogInfo($"Processing message: {message}");
+    private bool ProcessMessage(string message) {
+      _logger.LogInfo($"Processing message: {message}", ConsoleColor.Yellow);
 
-      var modules = JsonConvert.DeserializeObject<List<Module>>(message);
+      try {
+        var modules = JsonConvert.DeserializeObject<List<Module>>(message);
 
-      SaveModulesToDatabase(modules);
+        _databaseManager.SaveModulesToDatabase(modules);
 
-      _logger.LogInfo($"Message processed: {message}");
-    }
-
-    private void SaveModulesToDatabase(List<Module> modules) {
-
-      string databaseFileName = "devicesDB.db";
-      string databaseFolderPath = @"C:\Users\Furer\Downloads";
-      string databaseFilePath = Path.Combine(databaseFolderPath, databaseFileName);
-
-      string connectionString = $"Data Source={databaseFilePath}";
-
-
-
-      using (SqliteConnection connection = new(connectionString)) {
-        SQLite3Provider_e_sqlite3 sqlite3Provider = new();
-        raw.SetProvider(sqlite3Provider);
-
-        connection.Open();
-
-        string createTableQuery = @"CREATE TABLE IF NOT EXISTS Modules (ModuleCategoryID TEXT PRIMARY KEY, ModuleState TEXT)";
-
-        using (SqliteCommand command = new(createTableQuery, connection)) {
-          command.ExecuteNonQuery();
-        }
-
-        string Query = "INSERT OR REPLACE INTO Modules (ModuleCategoryID, ModuleState) VALUES (@CategoryID, @State);";
-        foreach (var module in modules) {
-          using (SqliteCommand command = new(Query, connection)) {
-            command.Parameters.AddWithValue("@CategoryID", module.ModuleCategoryID);
-            command.Parameters.AddWithValue("@State", module.ModuleState.ToString());
-            command.ExecuteNonQuery();
-          }
-        }
+        return true;
+      }
+      catch (Exception ex) {
+        _logger.LogError($"Error processing message: {message}. Error: {ex.Message}");
+        return false;
       }
     }
   }
