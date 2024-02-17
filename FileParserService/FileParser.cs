@@ -1,4 +1,5 @@
-﻿using System.Xml.Linq;
+﻿using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace FileParserService {
   public class FileParser {
@@ -60,11 +61,12 @@ namespace FileParserService {
         var moduleStateXml = deviceStatusElement.Element("RapidControlStatus")?.Value;
 
         if (!string.IsNullOrEmpty(moduleCategoryID) && !string.IsNullOrEmpty(moduleStateXml)) {
-          var moduleState = ParseModuleStateXml(moduleStateXml);
+          ModuleState xmlModuleState = ParseModuleStateXml(moduleStateXml);
+          ModuleState newRandomModuleState = Module.ChangeModuleStateXml(xmlModuleState);
 
           modules.Add(new Module {
             ModuleCategoryID = moduleCategoryID,
-            ModuleState = moduleState
+            ModuleState = newRandomModuleState
           });
         }
       }
@@ -72,8 +74,18 @@ namespace FileParserService {
       return modules;
     }
 
-    private string ParseModuleStateXml(string moduleStateXml) {
-      return moduleStateXml;
+    public static ModuleState ParseModuleStateXml(string moduleStateXml) {
+      string pattern = @"<ModuleState>(.*?)<\/ModuleState>";
+
+      Match match = Regex.Match(moduleStateXml, pattern);
+
+      if (match.Success) {
+        string stateValue = match.Groups[1].Value;
+
+        return Enum.TryParse(stateValue, out ModuleState result) ? result : ModuleState.Online;
+      } else {
+        return ModuleState.Online;
+      }
     }
   }
 }

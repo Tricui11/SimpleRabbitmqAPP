@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32616.157
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileParserService", "FileParserService\FileParserService.csproj", "{689F32E9-62C4-402A-91EC-65351B54D136}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FileParserService", "FileParserService\FileParserService.csproj", "{3BA287C5-C513-44A2-A1C3-55842431CABA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{689F32E9-62C4-402A-91EC-65351B54D136}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{689F32E9-62C4-402A-91EC-65351B54D136}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{689F32E9-62C4-402A-91EC-65351B54D136}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{689F32E9-62C4-402A-91EC-65351B54D136}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3BA287C5-C513-44A2-A1C3-55842431CABA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BA287C5-C513-44A2-A1C3-55842431CABA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BA287C5-C513-44A2-A1C3-55842431CABA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3BA287C5-C513-44A2-A1C3-55842431CABA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {4B02FFEA-E3A2-4F22-9867-C00F81267B0C}
+		SolutionGuid = {D729E15A-913B-475F-9424-616DA1664EF3}
 	EndGlobalSection
 EndGlobal
