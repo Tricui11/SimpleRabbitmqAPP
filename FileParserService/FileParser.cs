@@ -15,6 +15,7 @@ namespace FileParserService {
     private readonly ILogger _logger;
     private const string _processedDir = "processed";
     private const string _invalidDir = "invalid";
+    private readonly ConcurrentHashSet<string> _processingFiles = new();
     private Dictionary<string, List<Module>> _processedFiles = new();
 
     public FileParser(RabbitMQSettings rabbitMQSettings, ILogger logger, string dataDirectoryPath) {
@@ -30,24 +31,28 @@ namespace FileParserService {
     }
 
     public void Start() {
-      Thread thread = new(MonitorDirectory);
-      thread.Start();
+      ThreadPool.QueueUserWorkItem(MonitorDirectory);
     }
 
-    private void MonitorDirectory() {
+    private void MonitorDirectory(object state) {
       while (true) {
         try {
           string[] xmlFiles = Directory.GetFiles(_dataDirectoryPath, "*.xml");
 
           foreach (string xmlFile in xmlFiles.OrderBy(p => p)) {
-            _logger.LogInfo($"A file {Path.GetFileName(xmlFile)} is being processed", ConsoleColor.Yellow);
-
-            bool success = ProcessXmlFile(xmlFile);
-            if (success) {
-              MoveFileTo(_processedDir, xmlFile);
+            if (_processingFiles.Contains(xmlFile)) {
+              continue;
             }
 
-            _logger.LogInfo($"Processing {Path.GetFileName(xmlFile)} is completed");
+            _processingFiles.Add(xmlFile);
+
+            Task.Run(() => ProcessXmlFileAsync(xmlFile))
+                .ContinueWith(task => {
+                  _processingFiles.Remove(xmlFile);
+                  if (task.IsFaulted) {
+                    _logger.LogError($"Error processing file {xmlFile}: {task.Exception?.Message}");
+                  }
+                });
           }
         }
         catch (Exception ex) {
@@ -58,14 +63,16 @@ namespace FileParserService {
       }
     }
 
-    private bool ProcessXmlFile(string filePath) {
+    private async Task ProcessXmlFileAsync(string filePath) {
       try {
+        _logger.LogInfo($"A file {Path.GetFileName(filePath)} is being processed", ConsoleColor.Yellow);
+
         List<Module> modules;
 
         if (_processedFiles.ContainsKey(filePath)) {
           modules = _processedFiles[filePath];
         } else {
-          string xmlContent = File.ReadAllText(filePath);
+          string xmlContent = await File.ReadAllTextAsync(filePath);
           modules = ParseXml(xmlContent, filePath);
 
           if (modules.Any()) {
@@ -77,17 +84,17 @@ namespace FileParserService {
         if (modules.Any()) {
           string modulesJson = JsonConvert.SerializeObject(modules);
           bool success = SendRabbitMQMessage(modulesJson);
-          if (!success) {
+          if (success) {
+            MoveFileTo(_processedDir, filePath);
+          } else {
             _logger.LogError($"Error sending XML file {Path.GetFileName(filePath)} through RabbitMQ");
           }
-          return success;
         }
 
-        return false;
+        _logger.LogInfo($"Processing {Path.GetFileName(filePath)} is completed", ConsoleColor.Green);
       }
       catch (Exception ex) {
         _logger.LogError($"Error processing XML file {Path.GetFileName(filePath)}: {ex.Message}");
-        return false;
       }
     }
 
@@ -191,6 +198,7 @@ namespace FileParserService {
       }
       catch (Exception ex) {
         Console.WriteLine($"Error while sending RabbitMQ message: {ex.Message}");
+        //Thread.Sleep(TimeSpan.FromSeconds(10));
         return false;
       }
     }
