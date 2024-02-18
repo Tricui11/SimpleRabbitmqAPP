@@ -34,7 +34,7 @@ namespace DataProcessorService {
 
         channel.QueueDeclare(queue: _queueName, durable: false, exclusive: false, autoDelete: false, arguments: null);
 
-        var consumer = new EventingBasicConsumer(channel);
+        EventingBasicConsumer consumer = new(channel);
         consumer.Received += (model, ea) => {
           var body = ea.Body.ToArray();
           var message = Encoding.UTF8.GetString(body);
@@ -53,7 +53,7 @@ namespace DataProcessorService {
         Console.ReadLine();
       }
       catch (Exception ex) {
-        _logger.LogError($"An error occurred while processing: {ex.Message}");
+        _logger.LogError($"An error occurred while processing: {ex.Message}. Stack trace: {ex.StackTrace}");
       }
     }
 
@@ -63,12 +63,14 @@ namespace DataProcessorService {
       try {
         var modules = JsonConvert.DeserializeObject<List<Module>>(message);
 
-        _databaseManager.SaveModulesToDatabase(modules);
+        if (modules.Any()) {
+          _databaseManager.SaveModulesToDatabase(modules);
+        }
 
         return true;
       }
       catch (Exception ex) {
-        _logger.LogError($"Error processing message: {message}. Error: {ex.Message}");
+        _logger.LogError($"Error processing message: {message}. Error: {ex.Message}. Stack trace: {ex.StackTrace}");
         return false;
       }
     }

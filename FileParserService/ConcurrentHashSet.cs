@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 
 public class ConcurrentHashSet<T> {
-  private readonly ConcurrentDictionary<T, bool> _dictionary = new ConcurrentDictionary<T, bool>();
+  private readonly ConcurrentDictionary<T, bool> _dictionary = new();
 
   public bool TryAdd(T item) {
     return _dictionary.TryAdd(item, true);

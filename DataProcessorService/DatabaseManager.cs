@@ -11,18 +11,18 @@ namespace DataProcessorService {
     }
 
     private void InitializeDatabase() {
-      using (var connection = new SqliteConnection(_connectionString)) {
+      using (SqliteConnection connection = new(_connectionString)) {
         connection.Open();
 
         string createTableQuery = @"CREATE TABLE IF NOT EXISTS Modules (ModuleCategoryID TEXT PRIMARY KEY, ModuleState TEXT)";
 
-        using var command = new SqliteCommand(createTableQuery, connection);
+        using SqliteCommand command = new(createTableQuery, connection);
         command.ExecuteNonQuery();
       }
     }
 
     public void SaveModulesToDatabase(List<Module> modules) {
-      using (var connection = new SqliteConnection(_connectionString)) {
+      using (SqliteConnection connection = new(_connectionString)) {
         connection.Open();
 
         using (var transaction = connection.BeginTransaction()) {
@@ -41,14 +41,14 @@ namespace DataProcessorService {
           }
           catch (Exception ex) {
             transaction.Rollback();
-            throw new Exception("Failed to save modules to the database.", ex);
+            throw new Exception($"Failed to save modules to the database. Stack trace: {ex.StackTrace}", ex);
           }
         }
       }
     }
 
-    private int ExecuteNonQuery(string query, Dictionary<string, object> parameters, SqliteConnection connection, SqliteTransaction transaction = null) {
-      using (var command = new SqliteCommand(query, connection, transaction)) {
+    private static int ExecuteNonQuery(string query, Dictionary<string, object> parameters, SqliteConnection connection, SqliteTransaction transaction = null) {
+      using (SqliteCommand command = new(query, connection, transaction)) {
         foreach (var parameter in parameters) {
           command.Parameters.AddWithValue(parameter.Key, parameter.Value);
         }

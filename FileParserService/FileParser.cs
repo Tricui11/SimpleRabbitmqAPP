@@ -17,7 +17,7 @@ namespace FileParserService {
     private const string _processedDir = "processed";
     private const string _invalidDir = "invalid";
     private readonly ConcurrentHashSet<string> _processingFiles = new();
-    private ConcurrentDictionary<string, List<Module>> _parsedFiles = new();
+    private readonly ConcurrentDictionary<string, List<Module>> _parsedFiles = new();
 
     public FileParser(RabbitMQSettings rabbitMQSettings, ILogger logger, string dataDirectoryPath) {
       _queueName = rabbitMQSettings.QueueName;
@@ -51,7 +51,7 @@ namespace FileParserService {
               await ProcessXmlFileAsync(xmlFile);
             }
             catch (Exception ex) {
-              _logger.LogError($"Error processing file {xmlFile}: {ex.Message}");
+              _logger.LogError($"Error processing file {xmlFile}: {ex.Message}. Stack trace: {ex.StackTrace}");
             }
             finally {
               _processingFiles.TryRemove(xmlFile);
@@ -59,7 +59,7 @@ namespace FileParserService {
           }
         }
         catch (Exception ex) {
-          _logger.LogError($"Error while monitoring directory: {ex.Message}");
+          _logger.LogError($"Error while monitoring directory: {ex.Message}. Stack trace: {ex.StackTrace}");
         }
 
         Task.Delay(1000);
@@ -97,7 +97,7 @@ namespace FileParserService {
         _logger.LogInfo($"Processing {Path.GetFileName(filePath)} is completed", ConsoleColor.Green);
       }
       catch (Exception ex) {
-        _logger.LogError($"Error processing XML file {Path.GetFileName(filePath)}: {ex.Message}");
+        _logger.LogError($"Error processing XML file {Path.GetFileName(filePath)}: {ex.Message}. Stack trace: {ex.StackTrace}");
       }
     }
 
@@ -121,7 +121,7 @@ namespace FileParserService {
         return;
       }
       catch (Exception ex) {
-        _logger.LogError($"Error moving the file: {ex.Message}");
+        _logger.LogError($"Error moving the file: {ex.Message}. Stack trace: {ex.StackTrace}");
       }
     }
 
@@ -142,7 +142,7 @@ namespace FileParserService {
               moduleState = ParseModuleStateXml(moduleStateXml);
             }
             catch (Exception ex) {
-              _logger.LogError($"Error parsing ModuleState: {ex.Message}");
+              _logger.LogError($"Error parsing ModuleState: {ex.Message}. Stack trace: {ex.StackTrace}");
               MoveFileTo(_invalidDir, filePath);
               return new List<Module>();
             }
@@ -159,7 +159,7 @@ namespace FileParserService {
         }
       }
       catch (Exception ex) {
-        _logger.LogError($"Error parsing XML file: {ex.Message}");
+        _logger.LogError($"Error parsing XML file: {ex.Message}. Stack trace: {ex.StackTrace}");
         MoveFileTo(_invalidDir, filePath);
         return new List<Module>();
       }
@@ -200,7 +200,7 @@ namespace FileParserService {
         }
       }
       catch (Exception ex) {
-        Console.WriteLine($"Error while sending RabbitMQ message: {ex.Message}");
+        Console.WriteLine($"Error while sending RabbitMQ message: {ex.Message}. Stack trace: {ex.StackTrace}");
         //Thread.Sleep(TimeSpan.FromSeconds(10));
         return false;
       }
