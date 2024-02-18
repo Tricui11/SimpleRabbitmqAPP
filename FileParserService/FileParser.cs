@@ -31,24 +31,30 @@ namespace FileParserService {
       _dataDirectoryPath = dataDirectoryPath;
     }
 
-    public async Task StartAsync() {
-      await Task.Run(async () => await MonitorDirectory(null));
-    }
-
-    private async Task MonitorDirectory(object state) {
+    public async Task MonitorDirectory() {
       while (true) {
+        SemaphoreSlim semaphore = new(10);
         try {
           string[] xmlFiles = Directory.GetFiles(_dataDirectoryPath, "*.xml");
 
+          List<Task> processingTasks = new();
           foreach (string xmlFile in xmlFiles.OrderBy(p => p)) {
             if (_processingFiles.Contains(xmlFile)) {
               continue;
             }
 
             _processingFiles.TryAdd(xmlFile);
-
+            
             try {
-              await ProcessXmlFileAsync(xmlFile);
+              await semaphore.WaitAsync();
+              processingTasks.Add(Task.Run(async () => {
+                try {
+                  await ProcessXmlFileAsync(xmlFile);
+                }
+                finally {
+                  semaphore.Release();
+                }
+              }));
             }
             catch (Exception ex) {
               _logger.LogError($"Error processing file {xmlFile}: {ex.Message}. Stack trace: {ex.StackTrace}");
@@ -57,12 +63,13 @@ namespace FileParserService {
               _processingFiles.TryRemove(xmlFile);
             }
           }
+          await Task.WhenAll(processingTasks);
         }
         catch (Exception ex) {
           _logger.LogError($"Error while monitoring directory: {ex.Message}. Stack trace: {ex.StackTrace}");
         }
 
-        Task.Delay(1000);
+        await Task.Delay(1000);
       }
     }
 

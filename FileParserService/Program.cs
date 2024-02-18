@@ -13,7 +13,7 @@ namespace FileParserService {
       ConsoleLogger logger = new();
 
       FileParser fileParser = new(rabbitMQSettings, logger, dataDirectoryPath);
-      await fileParser.StartAsync();
+      await fileParser.MonitorDirectory();
 
       Console.WriteLine("FileParserService is running. Press any key to complete.");
       Console.ReadKey();
