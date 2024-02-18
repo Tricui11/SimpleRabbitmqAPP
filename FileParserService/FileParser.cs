@@ -32,12 +32,15 @@ namespace FileParserService {
     }
 
     public async Task MonitorDirectory() {
+      SemaphoreSlim semaphore = new(10);
+      List<Task> processingTasks = new();
+
       while (true) {
-        SemaphoreSlim semaphore = new(10);
         try {
           string[] xmlFiles = Directory.GetFiles(_dataDirectoryPath, "*.xml");
 
-          List<Task> processingTasks = new();
+          processingTasks.Clear();
+
           foreach (string xmlFile in xmlFiles.OrderBy(p => p)) {
             if (_processingFiles.Contains(xmlFile)) {
               continue;
