@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Concurrent;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using CommonLibrary.Logging;
@@ -16,7 +17,7 @@ namespace FileParserService {
     private const string _processedDir = "processed";
     private const string _invalidDir = "invalid";
     private readonly ConcurrentHashSet<string> _processingFiles = new();
-    private Dictionary<string, List<Module>> _processedFiles = new();
+    private ConcurrentDictionary<string, List<Module>> _parsedFiles = new();
 
     public FileParser(RabbitMQSettings rabbitMQSettings, ILogger logger, string dataDirectoryPath) {
       _queueName = rabbitMQSettings.QueueName;
@@ -30,11 +31,11 @@ namespace FileParserService {
       _dataDirectoryPath = dataDirectoryPath;
     }
 
-    public void Start() {
-      ThreadPool.QueueUserWorkItem(MonitorDirectory);
+    public async Task StartAsync() {
+      await Task.Run(async () => await MonitorDirectory(null));
     }
 
-    private void MonitorDirectory(object state) {
+    private async Task MonitorDirectory(object state) {
       while (true) {
         try {
           string[] xmlFiles = Directory.GetFiles(_dataDirectoryPath, "*.xml");
@@ -44,22 +45,24 @@ namespace FileParserService {
               continue;
             }
 
-            _processingFiles.Add(xmlFile);
+            _processingFiles.TryAdd(xmlFile);
 
-            Task.Run(() => ProcessXmlFileAsync(xmlFile))
-                .ContinueWith(task => {
-                  _processingFiles.Remove(xmlFile);
-                  if (task.IsFaulted) {
-                    _logger.LogError($"Error processing file {xmlFile}: {task.Exception?.Message}");
-                  }
-                });
+            try {
+              await ProcessXmlFileAsync(xmlFile);
+            }
+            catch (Exception ex) {
+              _logger.LogError($"Error processing file {xmlFile}: {ex.Message}");
+            }
+            finally {
+              _processingFiles.TryRemove(xmlFile);
+            }
           }
         }
         catch (Exception ex) {
           _logger.LogError($"Error while monitoring directory: {ex.Message}");
         }
 
-        Thread.Sleep(1000);
+        Task.Delay(1000);
       }
     }
 
@@ -69,15 +72,15 @@ namespace FileParserService {
 
         List<Module> modules;
 
-        if (_processedFiles.ContainsKey(filePath)) {
-          modules = _processedFiles[filePath];
+        if (_parsedFiles.ContainsKey(filePath)) {
+          modules = _parsedFiles[filePath];
         } else {
           string xmlContent = await File.ReadAllTextAsync(filePath);
           modules = ParseXml(xmlContent, filePath);
 
           if (modules.Any()) {
             modules.ForEach(p => p.ChangeModuleState());
-            _processedFiles.Add(filePath, modules);
+            _parsedFiles.TryAdd(filePath, modules);
           }
         }
 

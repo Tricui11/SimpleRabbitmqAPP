@@ -3,7 +3,7 @@
 public class ConcurrentHashSet<T> {
   private readonly ConcurrentDictionary<T, bool> _dictionary = new ConcurrentDictionary<T, bool>();
 
-  public bool Add(T item) {
+  public bool TryAdd(T item) {
     return _dictionary.TryAdd(item, true);
   }
 
@@ -11,7 +11,7 @@ public class ConcurrentHashSet<T> {
     return _dictionary.ContainsKey(item);
   }
 
-  public bool Remove(T item) {
+  public bool TryRemove(T item) {
     return _dictionary.TryRemove(item, out _);
   }
 }

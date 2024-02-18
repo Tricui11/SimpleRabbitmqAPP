@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace FileParserService {
   class Program {
-    static void Main() {
+    static async Task Main() {
       var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
       var config = configuration.Build();
       var section = config.GetSection("RabbitMQSettings");
@@ -13,7 +13,7 @@ namespace FileParserService {
       ConsoleLogger logger = new();
 
       FileParser fileParser = new(rabbitMQSettings, logger, dataDirectoryPath);
-      fileParser.Start();
+      await fileParser.StartAsync();
 
       Console.WriteLine("FileParserService is running. Press any key to complete.");
       Console.ReadKey();
