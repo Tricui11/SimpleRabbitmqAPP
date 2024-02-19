@@ -16,7 +16,6 @@ namespace FileParserService {
     private readonly ILogger _logger;
     private const string _processedDir = "processed";
     private const string _invalidDir = "invalid";
-    private readonly ConcurrentHashSet<string> _processingFiles = new();
     private readonly ConcurrentDictionary<string, List<Module>> _parsedFiles = new();
 
     public FileParser(RabbitMQSettings rabbitMQSettings, ILogger logger, string dataDirectoryPath) {
@@ -40,13 +39,7 @@ namespace FileParserService {
 
           List<Task> processingTasks = new();
 
-          foreach (string xmlFile in xmlFiles.OrderBy(p => p)) {
-            if (_processingFiles.Contains(xmlFile)) {
-              continue;
-            }
-
-            _processingFiles.TryAdd(xmlFile);
-            
+          foreach (string xmlFile in xmlFiles.OrderBy(p => p)) {            
             try {
               await semaphore.WaitAsync();
               processingTasks.Add(Task.Run(async () => {
@@ -60,9 +53,6 @@ namespace FileParserService {
             }
             catch (Exception ex) {
               _logger.LogError($"Error processing file {xmlFile}: {ex.Message}. Stack trace: {ex.StackTrace}");
-            }
-            finally {
-              _processingFiles.TryRemove(xmlFile);
             }
           }
           await Task.WhenAll(processingTasks);
