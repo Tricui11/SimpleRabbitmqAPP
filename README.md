@@ -1,3 +1,11 @@
+**Task:** Develop a system for processing XML files using RabbitMQ for interaction between multiple services in .NET.
+**Requirements:**
+•	*FileParser Service:* A service responsible for processing XML files. It reads XML files from the disk every second. Parses XML data and creates classes based on the received data. Randomly changes the ModuleState field of each module (Online, Run, NotReady, Offline). Forms the result in JSON format (containing all modules with the changed field). Sends the formed JSON to the DataProcessor Service via RabbitMQ for further processing.
+•	*DataProcessor Service:* A service that receives messages from RabbitMQ and processes the data. Saves the processing results in the database (local database usage is possible). Saves ModuleCategoryID and ModuleState fields. If ModuleCategoryID already exists in the database, only ModuleState is updated.
+•	*RabbitMQ:* Used for communication between FileParser and DataProcessor services.
+•	*Multithreading:* Ensure file processing in a separate thread for process optimization.
+•	*Implement logging* to track the file processing process. Error handling.
+
 **Deployment and Execution Guide**
 
 Description of Steps for Deploying the System on a Host for Testing
